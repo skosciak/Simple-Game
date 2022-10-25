@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang = 'en'>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Simply clickable game with destroying appearing cubes">
+        <link rel="icon" href="Assets/IG.png">
+        <link rel="stylesheet" type="text/css" href="styles.css">
+        <title>Sebastian Kościak - Simple Game</title>
+    </head>
+    <body>
+        <header>
+            <div id = 'header-text'>
+                <h1>Cube Game</h1>
+                <div id = 'p-header'>
+                    <p id = 'cube-at-game-container' class = 'p-header'>Cube count: 0</p>
+                    <p id = 'cube-destroyed' class = 'p-header'>Cube Destroied: 0</p>
+                    <p id = 'cube-left' class = 'p-header'>Cube to destroy: 0</p>
+                </div>
+            </div>
+            <div id = 'control-panel'>
+                <div id = 'start' class = 'control-button'><p class = 'p-control-button'>Start</p></div>
+                <div id = 'stop' class = 'control-button'><p class = 'p-control-button'>Stop</p></div>
+            </div>
+        </header>
+        <section id = 'game-container'>
+            <section id = 'game'>
+
+            </section>
+        </section>
+    </body>
+    <script type = 'text/javascript'>
+        let StorageForCubePosition = [];
+        let CountDestroyedCubes = 0;
+        let LoopID = [];
+        let CountSpeedOfAppearingCubes = 0;
+
+        function init(){ //Ładowanie potrzebnych funkcji
+            document.getElementById('start').addEventListener('click', () => {
+                document.querySelector('#start').innerHTML = 'Zwiększ prędkość';
+                CountSpeedOfAppearingCubes++;
+                if (CountSpeedOfAppearingCubes === 1)
+                    RandomizeLoop(1000);
+                else {
+                    for (let i = 0; i < CountSpeedOfAppearingCubes; i++) {
+                        StopLoop();
+                    }
+                    RandomizeLoop(1000 / CountSpeedOfAppearingCubes);
+                }
+            });
+            document.getElementById('stop').addEventListener('click', () => {
+                if(LoopID.length == 1)
+                    document.querySelector('#start').innerHTML = 'Start';
+                StopLoop();
+                CountSpeedOfAppearingCubes = 0;
+            });
+            document.querySelector('#game').addEventListener('click', (event) => {
+                DestroyCube(event);
+                ShowStats();
+            });
+        };            
+
+        function StopLoop() { //Zatrzymanie pętli tworzenia kwadratów
+            clearInterval(LoopID[LoopID.length-1]);
+            LoopID.pop();
+        }
+
+        function DestroyCube(event){ //Usuwanie kwadratów z widoku
+            console.log('You clicked: ' + event.clientY + ' ' + event.clientX);
+            MapHeight = StorageForCubePosition.map(x => x[1]) // top
+                .findIndex(x => x > event.clientY - '20' && x < event.clientY); //Wyszukiwanie czy kliknięcie jest w kwadracie
+            MapWidth = StorageForCubePosition.map(x => x[2]) // left
+                .findIndex(x => x > event.clientX - '20' && x < event.clientX); //Wyszukiwanie czy kliknięcie jest w kwadracie
+            console.log("X axis: " + MapHeight, "Y axis: " + MapWidth);
+            if(MapHeight == '-1' && MapWidth == '-1') { //Brak kliknięcia w kwadrat
+                console.log('Pressed body');
+                return false;
+            }
+            else if (MapHeight == MapWidth) { //Kliknięcie w kwadrat usuwa z widoku kwadrat
+                document.querySelector('.cubenr' + MapHeight).setAttribute('style', 'display: none');
+                StorageForCubePosition[MapHeight] = [null, null, null];
+                console.log('Destroing cube nr: ' + MapHeight);
+                CountDestroyedCubes++;
+                return true;
+            }
+            else if (MapHeight != MapWidth){ //Jedna z osi wykryła kliknięcie w kwadracie, poszukiwanie innego koordynatu w drugiej osi
+                let TempCubePosition = JSON.parse(JSON.stringify(StorageForCubePosition));
+                let TempHeight = [];
+                let TempeWidth = [];
+                for (let i = 0; i < StorageForCubePosition.length; i++) { //Przeszukiwanie tablicy w celu wytypowania innych koordynatów kwadratu
+                    if (TempCubePosition.map(x => x[1]).findIndex(x => x > event.clientY - '20' && x < event.clientY) == '-1') {
+                        console.log("No more matches found");
+                        break;
+                    }
+                    else {
+                        TempHeight[TempHeight.length] = TempCubePosition.map(x => x[1])
+                            .findIndex(x => x > event.clientY - '20' && x < event.clientY);
+                        TempCubePosition[TempHeight[TempHeight.length - 1]][1] = null;
+                        console.log("Filtering array Y for additional matches " + TempHeight);
+                    };
+                };
+                for (let i = 0; i < StorageForCubePosition.length; i++) { //Przeszukiwanie tablicy w celu wytypowania innych koordynatów kwadratu
+                    if (TempCubePosition.map(x => x[2]).findIndex(x => x > event.clientX - '20' && x < event.clientX) == '-1') {
+                        console.log("No more matches found");
+                        break;
+                    }
+                    else {
+                        TempeWidth[TempeWidth.length] = TempCubePosition.map(x => x[2])
+                            .findIndex(x => x > event.clientX - '20' && x < event.clientX);
+                        TempCubePosition[TempeWidth[TempeWidth.length - 1]][2] = null;
+                        console.log("Filtering array X for additional matches " + TempeWidth);
+                    };
+                };
+                for (let i = 0; i < TempHeight.length; i++) { //Sprawdzenie czy któryś ze znalezionych koordynatów pokrywają się numerami identyfikacyjnymi
+                    for (let j = 0; j < TempeWidth.length; j++) {
+                        if (TempHeight[i] == TempeWidth[j]){
+                            document.querySelector('.cubenr' + TempHeight[i]).setAttribute('style', 'display: none');
+                            StorageForCubePosition[TempHeight[i]] = [null, null, null];
+                            CountDestroyedCubes++;
+                            console.log("After filtering found match index: " + TempHeight[i]);
+                            return true;
+                        }
+                    }
+                    
+                }
+            }
+            else {
+                return console.log('Pressed body');
+            };
+        }
+
+        async function RandomizeLoop(Interval){ //Rozpoczęcie pętli tworzenia kwadratów
+                LoopID[LoopID.length] = setInterval(async () => await CreateRandomizedDiv(document.querySelector('#game')), Interval);
+                setInterval(() => ShowStats(), Interval); //Odświeżanie statystyk
+        };
+
+        async function CreateRandomizedDiv(InsertInElement){ //Tworzenie kwadratów o zmiennych współrzędnych w zadanym elemencie HTML
+            RandomizeCubePosition(InsertInElement).then(result => {
+                const NewDiv = document.createElement('div');
+                let SetStyle = //Obiekt z podstawowymi parametrami dla kwadratu
+                {
+                    width: "20px",
+                    height: "20px",
+                    border: ".25em solid black",
+                    position: "absolute",
+                    backgroundColor: "#67b8ff",
+                    boxSizing: "border-box",
+                    left: null,
+                    top: null,
+                };
+                InsertInElement.insertAdjacentElement('beforeend', NewDiv); //Dodawanie do strony elementu
+                SetStyle.left = result[1] + 'px'; //Przypisywanie pozycji do obiektu
+                SetStyle.top = result[0] + 'px'; //Przypisywanie pozycji do obiektu
+                Object.assign(NewDiv.style, SetStyle); //Nadanie parametrów kwadratowi
+                NewDiv.setAttribute('class', 'cubenr' + StorageForCubePosition.length); //Dodanie klasy
+                StorageForCubePosition[StorageForCubePosition.length] = [StorageForCubePosition.length, result[0], result[1]]; //Dopisanie parametrów do tablicy
+            });
+        };
+
+        async function RandomizeCubePosition(InsertInElement) { //Tworzenie zmiennych współrzędnych dla kwadratu w elemencie wybranym wcześniej
+            console.log(InsertInElement.clientHeight, InsertInElement.clientWidth);
+            const RandomTop = Math.floor(Math.random() * InsertInElement.getBoundingClientRect().height) + 1 + Math.floor(InsertInElement.getBoundingClientRect().top);
+            const RandomLeft = Math.floor(Math.random() * InsertInElement.getBoundingClientRect().width) + 1 + Math.floor(InsertInElement.getBoundingClientRect().left);
+            console.log(RandomTop, RandomLeft);
+            return [RandomTop, RandomLeft];
+        };
+
+        async function ShowStats(){ //Wyświetlanie statystyk
+            const GetPShownCube = document.querySelector('#cube-at-game-container');
+            const GetPShownCubeDestroied = document.querySelector('#cube-destroyed');
+            const GetPShownCubeLeft = document.querySelector('#cube-left');
+            GetPShownCube.innerHTML = 'Cube count: ' + StorageForCubePosition.length;
+            GetPShownCubeDestroied.innerHTML = 'Cube Destroied: ' + CountDestroyedCubes;
+            GetPShownCubeLeft.innerHTML = 'Cube to destroy: ' + (StorageForCubePosition.length - CountDestroyedCubes);
+        };
+
+        
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</html>
